@@ -3,7 +3,7 @@ layout: post
 title: 开博客
 date: 2019-3-26
 categories: blog
-tags: [随笔,无聊]
+tags: [标签一]
 description: 文章金句。
 ---
 
