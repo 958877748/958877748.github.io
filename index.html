@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        #chat-box {
+            height: 400px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        #user-input {
+            width: 70%;
+            padding: 5px;
+        }
+
+        #send-btn {
+            padding: 5px 10px;
+        }
+
+        .user {
+            color: gray;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .message pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>聊天</h1>
+    <div id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="输入消息...">
+    <button id="send-btn">发送</button>
+
+    <script>
+
+        let Role = {
+            system: 'system',
+            user: 'user',
+            assistant: 'assistant'
+        }
+
+        class Message {
+            /** @type {string}*/
+            role
+            /** @type {string}*/
+            content
+        }
+
+        class Data {
+            /** @type {string}*/
+            model
+            /** @type {Array<Message>}*/
+            messages = []
+            /** @type {boolean}*/
+            stream
+            /** @type {number}*/
+            max_tokens
+        }
+        let URL = 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions'
+        let APIKEY = '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'
+        let MODEL = 'Qwen/Qwen2.5-72B-Instruct'
+        let DATA = new Data()
+        DATA.max_tokens = 8000
+        DATA.model = MODEL
+        DATA.stream = true
+
+        let msg = new Message()
+        msg.role = Role.system
+        let system = localStorage.getItem('system')
+        if (system) {
+            msg.content = system
+        } else {
+            msg.content = `你的角色是一位乐于助人的助手,性格幽默且活波,尽全力帮你的好朋友解决问题`
+        }
+        DATA.messages.push(msg)
+
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const content = userInput.value.trim();
+            if (content) {
+                let msg = new Message()
+                msg.role = Role.user
+                msg.content = content
+                DATA.messages.push(msg)
+                appendMessage('user', msg)
+
+                let msg2 = new Message()
+                msg2.role = Role.assistant
+                msg2.content = ''
+                let element = appendMessage('AI', msg2)
+                fetchLLMResponse((str) => {
+                    msg2.content += str
+                    element.innerHTML = `${marked.parse(msg2.content)}`;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                })
+                DATA.messages.push(msg2)
+                userInput.value = ''
+            }
+        }
+
+        function appendMessage(sender, msg) {
+            const messageElement = document.createElement('div');
+            messageElement.className = sender + ' message';
+            const parsedMessage = marked.parse(msg.content);
+            messageElement.innerHTML = `${parsedMessage}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return messageElement
+        }
+
+        function fetchLLMResponse(steam, end) {
+            fetch(URL, {
+                method: 'POST',
+                headers: {
+                    "Authorization": `Bearer ${APIKEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(DATA)
+            }).then(response => {
+                const reader = response.body.getReader()
+                let decoder = new TextDecoder()
+                let buffer = ''
+
+                function processText({ done, value }) {
+                    if (done) {
+                        if (end) end()
+                        return
+                    }
+                    buffer += decoder.decode(value, { stream: true })
+
+                    let lines = buffer.split('\n')
+                    buffer = lines.pop(); // 最后一行可能不完整，保留在缓冲区中
+
+                    lines.forEach(line => {
+                        if (line) {
+                            try {
+                                if (line.startsWith('data: {')) {
+                                    const json = JSON.parse(line.substring(5))
+                                    let content = json.choices[0].delta.content
+                                    if (content) {
+                                        if (json.usage) {
+                                            steam(content, json.usage.total_tokens)
+                                        } else {
+                                            steam(content)
+                                        }
+                                    }
+                                    // steam(json.message.content)
+                                } else {
+                                    console.log(line)
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse JSON:', line, e)
+                            }
+                        }
+                    })
+
+                    // 继续读取
+                    return reader.read().then(processText)
+                }
+
+                // 开始读取
+                return reader.read().then(processText)
+            }).catch(error => {
+                console.error('Fetch error:', error)
+            })
+        }
+    </script>
+</body>
+
+</html>
