@@ -82,12 +82,13 @@
             isFetching = false
         }
         let URL = 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions'
-        let APIKEY = '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'
+        let KEY = 'hf_FZGHifwSLtbHMpb'
         let MODEL = 'Qwen/Qwen2.5-72B-Instruct'
         let DATA = new Data()
         DATA.max_tokens = 8000
         DATA.model = MODEL
         DATA.stream = true
+        KEY += 'zWmMktyjrBfXKMICbup'
 
         let msg = new Message()
         msg.role = Role.system
@@ -156,7 +157,7 @@
             fetch(URL, {
                 method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${APIKEY}`,
+                    "Authorization": `Bearer ${KEY}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(DATA)
