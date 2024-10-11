@@ -2,7 +2,7 @@
 <html lang="zh">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聊天</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -24,6 +24,7 @@
 
         #user-input {
             width: 70%;
+            margin-left: 5px;
             padding: 5px;
         }
 
@@ -52,7 +53,7 @@
     <h1>聊天</h1>
     <div id="chat-box"></div>
     <input type="text" id="user-input" placeholder="输入消息...">
-    <button id="send-btn">发送</button>
+    <button type="button" id="send-btn">发送</button>
 
     <script>
 
@@ -78,6 +79,7 @@
             stream
             /** @type {number}*/
             max_tokens
+            isFetching = false
         }
         let URL = 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions'
         let APIKEY = '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'
@@ -110,25 +112,32 @@
 
         function sendMessage() {
             const content = userInput.value.trim();
-            if (content) {
-                let msg = new Message()
-                msg.role = Role.user
-                msg.content = content
-                DATA.messages.push(msg)
-                appendMessage('user', msg)
-
-                let msg2 = new Message()
-                msg2.role = Role.assistant
-                msg2.content = ''
-                let element = appendMessage('AI', msg2)
-                fetchLLMResponse((str) => {
-                    msg2.content += str
-                    element.innerHTML = `${marked.parse(msg2.content)}`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                })
-                DATA.messages.push(msg2)
-                userInput.value = ''
+            if (!content) {
+                return
             }
+            if (DATA.isFetching) {
+                return
+            }
+            DATA.isFetching = true
+            let msg = new Message()
+            msg.role = Role.user
+            msg.content = content
+            DATA.messages.push(msg)
+            appendMessage('user', msg)
+
+            let msg2 = new Message()
+            msg2.role = Role.assistant
+            msg2.content = ''
+            let element = appendMessage('AI', msg2)
+            fetchLLMResponse((str) => {
+                msg2.content += str
+                element.innerHTML = `${marked.parse(msg2.content)}`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, () => {
+                DATA.isFetching = false
+            })
+            DATA.messages.push(msg2)
+            userInput.value = ''
         }
 
         function appendMessage(sender, msg) {
