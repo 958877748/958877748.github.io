@@ -119,6 +119,7 @@
                 return
             }
             DATA.isFetching = true
+            sendBtn.innerHTML = '生成中...'
             let msg = new Message()
             msg.role = Role.user
             msg.content = content
@@ -135,6 +136,7 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
             }, () => {
                 DATA.isFetching = false
+                sendBtn.innerHTML = '发送'
             })
             DATA.messages.push(msg2)
             userInput.value = ''
