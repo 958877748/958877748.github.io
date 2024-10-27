@@ -1,11 +1,23 @@
 import os
 import glob
 
+def get_latest_screenshot_path2():
+  # 假设屏幕截图文件夹路径为用户的图片文件夹下的"Screenshots"
+  screenshot_folder = os.path.join(os.path.expanduser("~"), "Pictures", "Screenshots")
+  # 获取所有截图文件
+  screenshots = glob.glob(os.path.join(screenshot_folder, "*.png"))  # 假设截图为PNG格式
+  if not screenshots:
+      print("没有找到截图文件。")
+  # 获取最新的截图文件
+  latest_screenshot = max(screenshots, key=os.path.getctime)
+  print("最新的截图文件路径:", latest_screenshot)
+  return latest_screenshot
+
 def get_latest_screenshot_path(screenshot_folder):
     # Use glob to find all png and jpg files in the folder
     screenshots = glob.glob(os.path.join(screenshot_folder, '*.png')) + glob.glob(os.path.join(screenshot_folder, '*.jpg'))
     if not screenshots:
-        return None
+        return get_latest_screenshot_path2()
     # Get the latest file based on modification time
     latest_screenshot = max(screenshots, key=os.path.getmtime)
     return latest_screenshot
@@ -15,10 +27,10 @@ screenshot_folder = 'C:/Users/gl/OneDrive/图片/Screenshots'  # Replace with yo
 latest_image_path = get_latest_screenshot_path(screenshot_folder)
 print(latest_image_path)
 
-api_key = "hf_FZGHifwSLtbHMpb"
-api_key += "zWmMktyjrBfXKMICbup"
-base_url = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct/v1"
-model = "meta-llama/Llama-3.2-11B-Vision-Instruct"
+model = "google/gemini-flash-1.5-8b"
+base_url = "https://openrouter.ai/api/v1"
+api_key = "sk-or-v1-7f34389befc90c10fe888a8"
+api_key += "c787a981f0710a913e45e59e11632793531358ff5"
 
 import base64
 from openai import OpenAI
@@ -44,7 +56,7 @@ response = client.chat.completions.create(
       "content": [
         {
           "type": "text",
-          "text": "give me url",
+          "text": "提取这个浏览器截图的网页地址,然后只输出网址",
         },
         {
           "type": "image_url",
