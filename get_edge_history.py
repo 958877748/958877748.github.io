@@ -1,4 +1,3 @@
-
 import os
 import sqlite3
 import json
@@ -6,16 +5,28 @@ from datetime import datetime, timedelta
 
 def get_edge_history():
     # Edge history database path
-    edge_path = os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\Edge\User Data\Profile 1\History')
+    user_data_path = os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\Edge\User Data')
+    edge_path = None
+    
+    # 在 User Data 文件夹下搜索名为 History 的文件
+    for root, dirs, files in os.walk(user_data_path):
+        if 'History' in files:
+            edge_path = os.path.join(root, 'History')
+            break
+    
+    if edge_path is None:
+        print("未找到 History 文件")
+        return
     
     # Connect to the SQLite database
     conn = sqlite3.connect(edge_path)
     cursor = conn.cursor()
     
-    # Query to fetch the browsing history
+    # Query to fetch the browsing history with 'zxzj' in the URL
     query = """
     SELECT urls.url, urls.title, urls.visit_count, urls.last_visit_time
     FROM urls
+    WHERE urls.url LIKE '%zxzj%'
     ORDER BY urls.last_visit_time DESC
     LIMIT 100
     """
